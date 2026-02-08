@@ -69,7 +69,7 @@ Make sure to add the environment variables to the `env` object in your MCP clien
 | `tui.output` | Get screen content | `session_id` (required), `color` (default: false), `cursor` (default: "print") |
 | `tui.status` | Check session capability | `session_id` (required), `quiet` |
 | `tui.wait` | Wait for activity/exit | `session_id` (required), `mode` ("activity" or "exit"), `timeout_ms` |
-| `tui.resize_screen` | Resize terminal | `session_id` (required), `cols` (required), `rows` (required) |
+| `tui.resize` | Resize terminal | `session_id` (required), `cols` (required), `rows` (required) |
 | `tui.signal` | Send signal | `session_id` (required), `signal` (required, e.g. "SIGINT") |
 | `tui.stop` | Stop session | `session_id` (required) |
 | `tui.debug` | Get debug info | `session_id` (required), `clear` |

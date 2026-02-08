@@ -70,8 +70,8 @@ func (h *Handler) RegisterTools(s *server.MCPServer) {
 		mcp.WithNumber("timeout_ms", mcp.Description("Timeout in milliseconds")),
 	), h.handleWait)
 
-	// tui.resize_screen
-	s.AddTool(mcp.NewTool("tui.resize_screen",
+	// tui.resize
+	s.AddTool(mcp.NewTool("tui.resize",
 		mcp.WithDescription("Resize the terminal window. Sends SIGWINCH to trigger redraw."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
 		mcp.WithNumber("cols", mcp.Required(), mcp.Description("New column count")),

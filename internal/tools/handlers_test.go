@@ -230,7 +230,7 @@ func TestHandleResize_MissingParams(t *testing.T) {
 
 	// Missing cols and rows
 	req := mcp.CallToolRequest{}
-	req.Params.Name = "tui.resize_screen"
+	req.Params.Name = "tui.resize"
 	req.Params.Arguments = map[string]interface{}{
 		"session_id": "test-session",
 	}
