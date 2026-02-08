@@ -140,4 +140,4 @@ go build -o tui-mcp ./cmd/tui-mcp
 
 ## License
 
-MIT
+[MIT](LICENSE) License 
