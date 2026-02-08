@@ -15,7 +15,7 @@ import (
 
 const (
 	ServerName     = "tui-mcp"
-	ServerVersion  = "0.1.0"
+	ServerVersion  = "0.1.1"
 	SessionTimeout = 300 * time.Second // 5 minutes
 )
 
