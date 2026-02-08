@@ -36,14 +36,14 @@ func (h *Handler) RegisterTools(s *server.MCPServer) {
 		mcp.WithObject("env", mcp.Description("Environment variables")),
 		mcp.WithNumber("cols", mcp.Description("Terminal columns (default: 80)")),
 		mcp.WithNumber("rows", mcp.Description("Terminal rows (default: 24)")),
-		mcp.WithString("emulator", mcp.Description("Terminal emulator: xterm or custom")),
+		mcp.WithString("emulator", mcp.Description("Terminal emulator (default: xterm)")),
 	), h.handleStart)
 
 	// tui.input
 	s.AddTool(mcp.NewTool("tui.input",
-		mcp.WithDescription("Send input to a TUI session. Use \\r for Enter, \\e for Escape, \\e[A for arrow up."),
+		mcp.WithDescription("Send input to a TUI session. Use \\r for Enter, \\e for Escape; for arrow keys, e.g. up arrow, use \\e[A in Normal Cursor Mode, use \\eOA in Application Cursor Mode."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID from tui.start")),
-		mcp.WithString("text", mcp.Required(), mcp.Description("Text to send (supports C-style escapes: \\r \\n \\e \\t \\xHH)")),
+		mcp.WithString("text", mcp.Required(), mcp.Description("Text to send (supports C-style escapes and ANSI Escape Sequences: \\r \\n \\e \\t \\xHH)")),
 		mcp.WithBoolean("password", mcp.Description("If true, prompt user to enter password manually")),
 	), h.handleInput)
 
@@ -52,7 +52,7 @@ func (h *Handler) RegisterTools(s *server.MCPServer) {
 		mcp.WithDescription("Get the current terminal screen content."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
 		mcp.WithBoolean("color", mcp.Description("Include ANSI color codes (default: false)")),
-		mcp.WithString("cursor", mcp.Description("Cursor mode: none, print, inverse, both")),
+		mcp.WithString("cursor", mcp.Description("Cursor mode: none, print, inverse, both (default: print)")),
 	), h.handleOutput)
 
 	// tui.status
@@ -64,7 +64,7 @@ func (h *Handler) RegisterTools(s *server.MCPServer) {
 
 	// tui.wait
 	s.AddTool(mcp.NewTool("tui.wait",
-		mcp.WithDescription("Wait for terminal activity or process exit."),
+		mcp.WithDescription("Wait for terminal activity or process exit. Use it for long running commands to avoid polling."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
 		mcp.WithString("mode", mcp.Description("Wait mode: activity or exit")),
 		mcp.WithNumber("timeout_ms", mcp.Description("Timeout in milliseconds")),
@@ -80,20 +80,20 @@ func (h *Handler) RegisterTools(s *server.MCPServer) {
 
 	// tui.signal
 	s.AddTool(mcp.NewTool("tui.signal",
-		mcp.WithDescription("Send a signal to the process. Use SIGINT for Ctrl+C."),
+		mcp.WithDescription("Send a signal to the process. For example, use SIGINT for Ctrl+C."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
 		mcp.WithString("signal", mcp.Required(), mcp.Description("Signal: SIGINT, SIGTERM, SIGKILL, SIGQUIT, or number")),
 	), h.handleSignal)
 
 	// tui.stop
 	s.AddTool(mcp.NewTool("tui.stop",
-		mcp.WithDescription("Stop and clean up a session. Always call when done."),
+		mcp.WithDescription("Stop and clean up a session. Always call when a session is no longer needed."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
 	), h.handleStop)
 
 	// tui.debug
 	s.AddTool(mcp.NewTool("tui.debug",
-		mcp.WithDescription("Get debug info: termios mode, flags, unhandled escapes. Use to determine CSI vs SS3 mode."),
+		mcp.WithDescription("Get debug info: termios mode, flags, unhandled escapes. Use it to determine Normal Cursor Mode vs Application Cursor Mode."),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("Session ID")),
 		mcp.WithBoolean("clear", mcp.Description("Clear unhandled escape buffer")),
 	), h.handleDebug)
@@ -129,7 +129,7 @@ func (h *Handler) handleStart(ctx context.Context, req mcp.CallToolRequest) (*mc
 	opts.Cwd = req.GetString("cwd", "")
 	opts.Emulator = req.GetString("emulator", "xterm")
 
-	result, err := h.manager.Client().Start(opts)
+	result, err := h.manager.Client().Start(ctx, opts)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -168,7 +168,7 @@ func (h *Handler) handleInput(ctx context.Context, req mcp.CallToolRequest) (*mc
 		), nil
 	}
 
-	err = h.manager.Client().Input(sess.SocketPath, text, false)
+	err = h.manager.Client().Input(ctx, sess.SocketPath, text, false)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -191,10 +191,10 @@ func (h *Handler) handleOutput(ctx context.Context, req mcp.CallToolRequest) (*m
 
 	opts := interminai.OutputOptions{
 		Color:  req.GetBool("color", false),
-		Cursor: req.GetString("cursor", "none"),
+		Cursor: req.GetString("cursor", "print"),
 	}
 
-	result, err := h.manager.Client().Output(sess.SocketPath, opts)
+	result, err := h.manager.Client().Output(ctx, sess.SocketPath, opts)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -227,7 +227,7 @@ func (h *Handler) handleStatus(ctx context.Context, req mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("session not found: " + sessionID), nil
 	}
 
-	result, err := h.manager.Client().Status(sess.SocketPath, quiet)
+	result, err := h.manager.Client().Status(ctx, sess.SocketPath, quiet)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -260,13 +260,14 @@ func (h *Handler) handleWait(ctx context.Context, req mcp.CallToolRequest) (*mcp
 	}
 
 	// Create timeout context if specified
+	var waitCtx context.Context = ctx
 	if timeoutMs > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMs)*time.Millisecond)
+		waitCtx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMs)*time.Millisecond)
 		defer cancel()
 	}
 
-	result, err := h.manager.Client().Wait(sess.SocketPath, quiet, timeoutMs)
+	result, err := h.manager.Client().Wait(waitCtx, sess.SocketPath, quiet, timeoutMs)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -304,7 +305,7 @@ func (h *Handler) handleResize(ctx context.Context, req mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("session not found: " + sessionID), nil
 	}
 
-	err = h.manager.Client().Resize(sess.SocketPath, cols, rows)
+	err = h.manager.Client().Resize(ctx, sess.SocketPath, cols, rows)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -329,7 +330,7 @@ func (h *Handler) handleSignal(ctx context.Context, req mcp.CallToolRequest) (*m
 		return mcp.NewToolResultError("session not found: " + sessionID), nil
 	}
 
-	err = h.manager.Client().Kill(sess.SocketPath, signal)
+	err = h.manager.Client().Kill(ctx, sess.SocketPath, signal)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -373,7 +374,7 @@ func (h *Handler) handleDebug(ctx context.Context, req mcp.CallToolRequest) (*mc
 		return mcp.NewToolResultError("session not found: " + sessionID), nil
 	}
 
-	result, err := h.manager.Client().Debug(sess.SocketPath, clear)
+	result, err := h.manager.Client().Debug(ctx, sess.SocketPath, clear)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -420,13 +421,13 @@ func (h *Handler) handleObserve(ctx context.Context, req mcp.CallToolRequest) (*
 	}
 
 	// Get output
-	output, err := h.manager.Client().Output(sess.SocketPath, interminai.OutputOptions{Color: false})
+	output, err := h.manager.Client().Output(ctx, sess.SocketPath, interminai.OutputOptions{Color: false})
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	// Get status
-	status, err := h.manager.Client().Status(sess.SocketPath, false)
+	status, err := h.manager.Client().Status(ctx, sess.SocketPath, false)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}

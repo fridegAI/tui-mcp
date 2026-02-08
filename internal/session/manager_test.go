@@ -8,7 +8,10 @@ import (
 )
 
 func TestManager_CreateGetDeleteSession(t *testing.T) {
-	manager := NewManager(5 * time.Minute)
+	manager, err := NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	// Create session
@@ -45,7 +48,10 @@ func TestManager_CreateGetDeleteSession(t *testing.T) {
 }
 
 func TestManager_ListSessions(t *testing.T) {
-	manager := NewManager(5 * time.Minute)
+	manager, err := NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	// Initially empty
@@ -65,7 +71,10 @@ func TestManager_ListSessions(t *testing.T) {
 }
 
 func TestManager_TouchSession(t *testing.T) {
-	manager := NewManager(5 * time.Minute)
+	manager, err := NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	result := &interminai.StartResult{
@@ -86,7 +95,10 @@ func TestManager_TouchSession(t *testing.T) {
 }
 
 func TestManager_GetSession_NotFound(t *testing.T) {
-	manager := NewManager(5 * time.Minute)
+	manager, err := NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	_, ok := manager.GetSession("nonexistent")

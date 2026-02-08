@@ -26,10 +26,15 @@ type Manager struct {
 }
 
 // NewManager creates a new session manager.
-func NewManager(timeout time.Duration) *Manager {
+func NewManager(timeout time.Duration) (*Manager, error) {
+	client, err := interminai.NewClient()
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Manager{
 		sessions: make(map[string]*Session),
-		client:   interminai.NewClient(),
+		client:   client,
 		timeout:  timeout,
 		stopCh:   make(chan struct{}),
 	}
@@ -37,7 +42,7 @@ func NewManager(timeout time.Duration) *Manager {
 	// Start cleanup goroutine
 	go m.cleanupLoop()
 
-	return m
+	return m, nil
 }
 
 // Client returns the interminai client.
