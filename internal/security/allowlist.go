@@ -6,19 +6,10 @@ import (
 
 // DefaultAllowed contains safe READ commands.
 var DefaultAllowed = []string{
-	"grep", "ls", "cat", "head", "tail", "less", "more",
-	"find", "wc", "sort", "uniq", "diff", "file",
-	"git", "vim", "nvim", "vi", "nano", "emacs",
-	"htop", "top", "ps", "df", "du",
-	"bash", "sh", "zsh",
-	"python", "python3", "node",
-	"make", "cargo", "go",
-	"ssh", "scp",
-	"curl", "wget",
-	"man", "info", "help",
-	"echo", "printf", "date", "cal",
-	"env", "printenv", "which", "whereis",
-	"tree", "pwd", "id", "whoami",
+	"head", "tail", "less", "more",
+	"vim", "nvim", "vi", "nano", "emacs", "git",
+	"htop", "top", "man",
+	"netstat", "ping", "traceroute", "nc",
 }
 
 // BlockedPatterns contains dangerous command patterns.
@@ -27,10 +18,9 @@ var BlockedPatterns = []string{
 	"rm -fr",
 	"rm -r /",
 	"rm -f /",
-	"> /dev/",
 	"mkfs",
 	"dd if=",
-	":(){:|:&};:", // Fork bomb
+	"> /dev/",
 	"chmod -R 777",
 	"chown -R",
 }

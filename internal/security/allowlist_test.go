@@ -11,14 +11,13 @@ func TestAllowlist_Validate_AllowedCommands(t *testing.T) {
 		command string
 		allowed bool
 	}{
-		{"ls -la", true},
-		{"cat file.txt", true},
-		{"grep pattern file.txt", true},
 		{"git status", true},
 		{"vim file.txt", true},
 		{"htop", true},
-		{"bash", true},
-		{"python script.py", true},
+		{"tail -f log.txt", true},
+		{"head -n 10 file.txt", true},
+		{"man ls", true},
+		{"ping google.com", true},
 	}
 
 	for _, tt := range tests {
@@ -43,7 +42,7 @@ func TestAllowlist_Validate_BlockedPatterns(t *testing.T) {
 		{"rm file.txt", true}, // rm is not in allowlist, so it's blocked
 		{"mkfs.ext4 /dev/sda", true},
 		{"dd if=/dev/zero of=/dev/sda", true},
-		{":(){:|:&};:", true}, // Fork bomb
+		{"chmod -R 777 /", true},
 	}
 
 	for _, tt := range tests {

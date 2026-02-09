@@ -12,7 +12,7 @@ An MCP (Model Context Protocol) server that enables AI agents to interact with t
 
 ## Prerequisites
 
-- Go 1.21+
+- Go 1.25+
 - [interminai](https://github.com/guibef/interminai-plus) installed and available in PATH
 
 ## Installation
@@ -52,8 +52,8 @@ Make sure to add the environment variables to the `env` object in your MCP clien
       "command": "/path/to/tui-mcp",
       "env": {
         "SESSION_TIMEOUT": "10m",
-        "ALLOWED_COMMANDS": "kubectl,docker",
-        "BLOCKED_PATTERNS": "rm -rf,mkfs"
+        "ALLOWED_COMMANDS": "gdb,python,bash",
+        "BLOCKED_PATTERNS": "rm"
       }
     }
   }
@@ -113,13 +113,22 @@ The escape sequence for arrow keys depends on the terminal's Cursor Mode (Normal
 The server enforces a strict allowlist policy by default.
 
 ### Default Policy
-- **Allowed Commands:** `ls`, `cat`, `grep`, `vim`, `git`, `htop`, `python`, `node`, `ssh`, and many standard utilities.
-- **Blocked Patterns:** Recursive deletion (`rm -rf`, `rm -r /`), formatting (`mkfs`), fork bombs, and device writes (`> /dev/`).
+- **Allowed Commands:** 
+  - Read commands: `head`, `tail`, `less`, `more`
+  - Text editors: `vim`, `nvim`, `vi`, `nano`, `emacs`
+  - Version control: `git`
+  - System information: `htop`, `top`, `man`
+  - Network tools: `netstat`, `ping`, `traceroute`, `nc`
+- **Blocked Patterns:** 
+  - Recursive deletion: `rm -rf`, `rm -fr`, `rm -r /`, `rm -f /`
+  - File system operations: `mkfs`, `dd if=`
+  - Device writes: `> /dev/`
+  - File permissions: `chmod -R 777`, `chown -R`
 
 ### Customization
 You can extend the allowed list or add new blocked patterns via environment variables:
-- `ALLOWED_COMMANDS`: Add specific tools required for your workflow (e.g., `kubectl`, `terraform`).
-- `BLOCKED_PATTERNS`: Block specific arguments or dangerous command combinations.
+- `ALLOWED_COMMANDS`: Add specific tools required for your workflow (e.g., `gdb`, `python`, `bash`).
+- `BLOCKED_PATTERNS`: Block specific arguments or dangerous command combinations (e.g., `rm`).
 
 ## Development
 
