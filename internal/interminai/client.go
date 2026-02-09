@@ -2,6 +2,7 @@ package interminai
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -9,20 +10,22 @@ import (
 	"strings"
 )
 
-const BinaryPath = "/usr/local/bin/interminai"
-
 // Client wraps the interminai CLI.
 type Client struct {
 	binaryPath string
 }
 
 // NewClient creates a new interminai client.
-func NewClient() *Client {
-	return &Client{binaryPath: BinaryPath}
+func NewClient() (*Client, error) {
+	path, err := exec.LookPath("interminai")
+	if err != nil {
+		return nil, fmt.Errorf("interminai binary not found: %w", err)
+	}
+	return &Client{binaryPath: path}, nil
 }
 
 // Start starts an interminai session.
-func (c *Client) Start(opts StartOptions) (*StartResult, error) {
+func (c *Client) Start(ctx context.Context, opts StartOptions) (*StartResult, error) {
 	args := []string{"start"}
 
 	// Size
@@ -50,7 +53,7 @@ func (c *Client) Start(opts StartOptions) (*StartResult, error) {
 	args = append(args, "--")
 	args = append(args, "sh", "-c", opts.Command)
 
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	if opts.Cwd != "" {
 		cmd.Dir = opts.Cwd
 	}
@@ -76,9 +79,10 @@ func (c *Client) Start(opts StartOptions) (*StartResult, error) {
 
 // parseStartOutput parses the output from interminai start.
 // Example output:
-//   PID: 12345
-//   Socket: /tmp/interminai-xxx/socket
-//   Auto-generated: true
+//
+//	PID: 12345
+//	Socket: /tmp/interminai-xxx/socket
+//	Auto-generated: true
 func parseStartOutput(output string) (*StartResult, error) {
 	result := &StartResult{}
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -109,7 +113,7 @@ func parseStartOutput(output string) (*StartResult, error) {
 }
 
 // Input sends input to a session.
-func (c *Client) Input(socketPath, text string, password bool) error {
+func (c *Client) Input(ctx context.Context, socketPath, text string, password bool) error {
 	args := []string{"input", "--socket", socketPath}
 	if password {
 		args = append(args, "--password")
@@ -117,7 +121,7 @@ func (c *Client) Input(socketPath, text string, password bool) error {
 		args = append(args, "--text", text)
 	}
 
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("interminai input failed: %s", string(output))
@@ -126,7 +130,7 @@ func (c *Client) Input(socketPath, text string, password bool) error {
 }
 
 // Output gets the current terminal output.
-func (c *Client) Output(socketPath string, opts OutputOptions) (*OutputResult, error) {
+func (c *Client) Output(ctx context.Context, socketPath string, opts OutputOptions) (*OutputResult, error) {
 	args := []string{"output", "--socket", socketPath}
 
 	if !opts.Color {
@@ -136,7 +140,7 @@ func (c *Client) Output(socketPath string, opts OutputOptions) (*OutputResult, e
 		args = append(args, "--cursor", opts.Cursor)
 	}
 
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -177,13 +181,13 @@ func parseOutputResult(output string, cursorMode string) (*OutputResult, error) 
 }
 
 // Status gets the session status.
-func (c *Client) Status(socketPath string, quiet bool) (*StatusResult, error) {
+func (c *Client) Status(ctx context.Context, socketPath string, quiet bool) (*StatusResult, error) {
 	args := []string{"status", "--socket", socketPath}
 	if quiet {
 		args = append(args, "--quiet")
 	}
 
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.Output()
 
 	if quiet {
@@ -232,13 +236,13 @@ func parseStatusOutput(output string) (*StatusResult, error) {
 }
 
 // Wait waits for activity or exit.
-func (c *Client) Wait(socketPath string, quiet bool, timeoutMs int) (*WaitResult, error) {
+func (c *Client) Wait(ctx context.Context, socketPath string, quiet bool, timeoutMs int) (*WaitResult, error) {
 	args := []string{"wait", "--socket", socketPath}
 	if quiet {
 		args = append(args, "--quiet")
 	}
 
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.Output()
 
 	if quiet {
@@ -278,9 +282,9 @@ func parseWaitOutput(output string) (*WaitResult, error) {
 }
 
 // Resize resizes the terminal.
-func (c *Client) Resize(socketPath string, cols, rows int) error {
+func (c *Client) Resize(ctx context.Context, socketPath string, cols, rows int) error {
 	args := []string{"resize", "--socket", socketPath, "--size", fmt.Sprintf("%dx%d", cols, rows)}
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("interminai resize failed: %s", string(output))
@@ -289,9 +293,9 @@ func (c *Client) Resize(socketPath string, cols, rows int) error {
 }
 
 // Kill sends a signal to the process.
-func (c *Client) Kill(socketPath string, signal string) error {
+func (c *Client) Kill(ctx context.Context, socketPath string, signal string) error {
 	args := []string{"kill", "--socket", socketPath, "--signal", signal}
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("interminai kill failed: %s", string(output))
@@ -300,9 +304,15 @@ func (c *Client) Kill(socketPath string, signal string) error {
 }
 
 // Stop stops the session.
+// It is typically called during cleanup and uses a background context to ensure execution.
 func (c *Client) Stop(socketPath string) error {
+	return c.StopWithContext(context.Background(), socketPath)
+}
+
+// StopWithContext stops the session with context.
+func (c *Client) StopWithContext(ctx context.Context, socketPath string) error {
 	args := []string{"stop", "--socket", socketPath}
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("interminai stop failed: %s", string(output))
@@ -311,13 +321,13 @@ func (c *Client) Stop(socketPath string) error {
 }
 
 // Debug gets debug information.
-func (c *Client) Debug(socketPath string, clear bool) (*DebugResult, error) {
+func (c *Client) Debug(ctx context.Context, socketPath string, clear bool) (*DebugResult, error) {
 	args := []string{"debug", "--socket", socketPath}
 	if clear {
 		args = append(args, "--clear")
 	}
 
-	cmd := exec.Command(c.binaryPath, args...)
+	cmd := exec.CommandContext(ctx, c.binaryPath, args...)
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {

@@ -13,7 +13,10 @@ import (
 
 // TestHandleStart_BlockedCommand tests that blocked commands are rejected
 func TestHandleStart_BlockedCommand(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	allowlist := security.NewAllowlist(true)
@@ -39,7 +42,10 @@ func TestHandleStart_BlockedCommand(t *testing.T) {
 
 // TestHandleStart_AllowedCommand tests that allowed commands pass validation
 func TestHandleStart_AllowedCommand_Validation(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	allowlist := security.NewAllowlist(true)
@@ -73,7 +79,10 @@ func TestHandleStart_AllowedCommand_Validation(t *testing.T) {
 
 // TestHandleInput_SessionNotFound tests error handling for missing session
 func TestHandleInput_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -97,7 +106,10 @@ func TestHandleInput_SessionNotFound(t *testing.T) {
 
 // TestHandleOutput_SessionNotFound tests error handling for missing session
 func TestHandleOutput_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -120,7 +132,10 @@ func TestHandleOutput_SessionNotFound(t *testing.T) {
 
 // TestHandleStatus_SessionNotFound tests error handling for missing session
 func TestHandleStatus_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -143,7 +158,10 @@ func TestHandleStatus_SessionNotFound(t *testing.T) {
 
 // TestHandleStop_SessionNotFound tests error handling for missing session
 func TestHandleStop_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -166,7 +184,10 @@ func TestHandleStop_SessionNotFound(t *testing.T) {
 
 // TestHandleInput_PasswordMode tests password delegation message
 func TestHandleInput_PasswordMode(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -199,14 +220,17 @@ func TestHandleInput_PasswordMode(t *testing.T) {
 
 // TestHandleResize_MissingParams tests missing required parameters
 func TestHandleResize_MissingParams(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
 
 	// Missing cols and rows
 	req := mcp.CallToolRequest{}
-	req.Params.Name = "tui.resize_screen"
+	req.Params.Name = "tui.resize"
 	req.Params.Arguments = map[string]interface{}{
 		"session_id": "test-session",
 	}
@@ -223,7 +247,10 @@ func TestHandleResize_MissingParams(t *testing.T) {
 
 // TestHandleSignal_MissingParams tests missing required parameters
 func TestHandleSignal_MissingSignal(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -246,7 +273,10 @@ func TestHandleSignal_MissingSignal(t *testing.T) {
 
 // TestHandleObserve_SessionNotFound tests error handling for missing session
 func TestHandleObserve_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -269,7 +299,10 @@ func TestHandleObserve_SessionNotFound(t *testing.T) {
 
 // TestHandleDebug_SessionNotFound tests error handling for missing session
 func TestHandleDebug_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)
@@ -292,7 +325,10 @@ func TestHandleDebug_SessionNotFound(t *testing.T) {
 
 // TestHandleWait_SessionNotFound tests error handling for missing session
 func TestHandleWait_SessionNotFound(t *testing.T) {
-	manager := session.NewManager(5 * time.Minute)
+	manager, err := session.NewManager(5 * time.Minute)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	defer manager.Stop()
 
 	handler := NewHandler(manager, nil)

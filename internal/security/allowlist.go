@@ -30,16 +30,16 @@ var BlockedPatterns = []string{
 	"> /dev/",
 	"mkfs",
 	"dd if=",
-	":(){:|:&};:",  // Fork bomb
+	":(){:|:&};:", // Fork bomb
 	"chmod -R 777",
 	"chown -R",
 }
 
 // Allowlist validates commands against security policies.
 type Allowlist struct {
-	allowed  map[string]bool
-	blocked  []string
-	enabled  bool
+	allowed map[string]bool
+	blocked []string
+	enabled bool
 }
 
 // NewAllowlist creates a new command allowlist.
@@ -92,6 +92,11 @@ func (a *Allowlist) AddAllowed(cmd string) {
 // RemoveAllowed removes a command from the allowlist.
 func (a *Allowlist) RemoveAllowed(cmd string) {
 	delete(a.allowed, cmd)
+}
+
+// AddBlocked adds a pattern to the blocked list.
+func (a *Allowlist) AddBlocked(pattern string) {
+	a.blocked = append(a.blocked, pattern)
 }
 
 // extractBaseCommand extracts the base command from a command string.

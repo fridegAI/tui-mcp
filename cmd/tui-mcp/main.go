@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,16 +16,47 @@ import (
 
 const (
 	ServerName     = "tui-mcp"
-	ServerVersion  = "0.1.0"
+	ServerVersion  = "0.1.1"
 	SessionTimeout = 300 * time.Second // 5 minutes
 )
 
 func main() {
+	// Parse configuration
+	sessionTimeout := SessionTimeout
+	if timeoutStr := os.Getenv("SESSION_TIMEOUT"); timeoutStr != "" {
+		if d, err := time.ParseDuration(timeoutStr); err == nil {
+			sessionTimeout = d
+		} else {
+			log.Printf("Invalid SESSION_TIMEOUT format: %v, using default", err)
+		}
+	}
+
 	// Create session manager
-	manager := session.NewManager(SessionTimeout)
+	manager, err := session.NewManager(sessionTimeout)
+	if err != nil {
+		log.Fatalf("Failed to create session manager: %v", err)
+	}
 
 	// Create command allowlist (enabled by default)
 	allowlist := security.NewAllowlist(true)
+
+	// Add configured allowed commands
+	if allowedCmds := os.Getenv("ALLOWED_COMMANDS"); allowedCmds != "" {
+		for _, cmd := range strings.Split(allowedCmds, ",") {
+			if trimmed := strings.TrimSpace(cmd); trimmed != "" {
+				allowlist.AddAllowed(trimmed)
+			}
+		}
+	}
+
+	// Add configured blocked patterns
+	if blockedPatterns := os.Getenv("BLOCKED_PATTERNS"); blockedPatterns != "" {
+		for _, pattern := range strings.Split(blockedPatterns, ",") {
+			if trimmed := strings.TrimSpace(pattern); trimmed != "" {
+				allowlist.AddBlocked(trimmed)
+			}
+		}
+	}
 
 	// Create MCP server
 	s := server.NewMCPServer(
